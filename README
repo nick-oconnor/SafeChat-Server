@@ -2,4 +2,4 @@ SafeChat-Server is server software required by the SafeChat client.
 
 SafeChat-Server Build Requirements:
 GNU Make
-GNU C++ Compiler (g++)
+GNU C++ Compiler
