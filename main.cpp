@@ -16,8 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <list>
-#include <vector>
+#include <map>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -75,36 +74,23 @@ private:
         }
     };
 
-    class Host {
-    public:
-
-        long _id;
-        std::string _name;
-
-        Host(long id, const std::string name) {
-            _id = id;
-            _name = name;
-        }
-    };
-
     class Connection {
     public:
 
         int _socket;
         bool _available, _terminated;
-        long _id, _bytes;
         std::string _name;
-        std::list<Connection> *_connections;
+        std::map<int, Connection> *_connections;
+        std::map<int, std::string> *_hosts;
         pthread_t _connection;
         time_t _time;
         Connection *_peer;
 
-        Connection(long id, int socket, std::list<Connection> *connections) {
-            _id = id;
+        Connection(int socket, std::map<int, Connection> *connections, std::map<int, std::string> *hosts) {
             _socket = socket;
             _connections = connections;
+            _hosts = hosts;
             _available = _terminated = false;
-            _bytes = 0;
             _peer = NULL;
             time(&_time);
         }
@@ -115,10 +101,10 @@ private:
 
         void terminate() {
             if (_peer != NULL) {
-                _peer->Send(Block(__null));
-                _peer->_terminated = true;
                 pthread_kill(_peer->_connection, SIGTERM);
+                _peer->Send(Block(__null));
                 _peer->_peer = NULL;
+                _peer->_terminated = true;
                 _peer = NULL;
             }
             _terminated = true;
@@ -129,13 +115,11 @@ private:
 
         void *connection() {
 
-            std::list<Connection>::iterator itr;
             Block block(__null);
 
             signal(SIGTERM, exit);
             while (true) {
                 Recv(block);
-                _bytes += __block_size;
                 if (block.cmd() == __keep_alive) {
                     time(&_time);
                 }
@@ -143,44 +127,57 @@ private:
                     _name = block.str();
                 }
                 else if (block.cmd() == __set_available && _peer == NULL) {
-                    _available = true;
+                    _hosts->insert(std::make_pair(_socket, _name));
                 }
                 else if (block.cmd() == __get_hosts && _peer == NULL) {
 
-                    std::vector<Host> hosts;
+                    std::map<int, std::string>::iterator itr;
 
-                    for (itr = _connections->begin(); itr != _connections->end(); ++itr) {
-                        if (itr->_available) {
-                            hosts.push_back(Host(itr->_id, itr->_name));
-                        }
-                    }
-                    Send(Block(__null, int2str(hosts.size())));
-                    for (size_t i = 0; i < hosts.size(); ++i) {
-                        Send(Block(__null, int2str(hosts[i]._id)));
-                        Send(Block(__null, hosts[i]._name));
+                    Send(Block(__null, int2str(_hosts->size())));
+                    for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
+                        Send(Block(__null, int2str(itr->first)));
+                        Send(Block(__null, itr->second));
                     }
                 }
                 else if (block.cmd() == __try_host && _peer == NULL) {
-                    itr = find_peer(block.num());
-                    if (itr != _connections->end()) {
-                        itr->Send(Block(__null, int2str(_id)));
-                        itr->Send(Block(__null, _name));
-                        itr->_available = false;
+
+                    std::map<int, Connection>::iterator itr;
+
+                    itr = _connections->find(block.num());
+                    if (itr == _connections->end()) {
+                        terminate();
+                    }
+                    else {
+                        itr->second.Send(Block(__null, int2str(_socket)));
+                        itr->second.Send(Block(__null, _name));
+                        _hosts->erase(itr->first);
                     }
                 }
                 else if (block.cmd() == __accept_client && _peer == NULL) {
-                    itr = find_peer(block.num());
-                    if (itr != _connections->end()) {
-                        _peer = &*itr;
-                        itr->_peer = this;
+
+                    std::map<int, Connection>::iterator itr;
+
+                    itr = _connections->find(block.num());
+                    if (itr == _connections->end()) {
+                        terminate();
+                    }
+                    else {
+                        _peer = &itr->second;
+                        itr->second._peer = this;
                         _peer->Send(block);
                     }
                 }
                 else if (block.cmd() == __decline_client && _peer == NULL) {
-                    itr = find_peer(block.num());
-                    if (itr != _connections->end()) {
-                        itr->Send(block);
-                        _available = true;
+
+                    std::map<int, Connection>::iterator itr;
+
+                    itr = _connections->find(block.num());
+                    if (itr == _connections->end()) {
+                        terminate();
+                    }
+                    else {
+                        itr->second.Send(block);
+                        _hosts->insert(std::make_pair(_socket, _name));
                     }
                 }
                 else if (block.cmd() == __send_data && _peer != NULL) {
@@ -206,18 +203,6 @@ private:
             return output;
         }
 
-        std::list<Connection>::iterator find_peer(long id) {
-
-            std::list<Connection>::iterator itr;
-
-            for (itr = _connections->begin(); itr != _connections->end(); ++itr) {
-                if (id == itr->_id) {
-                    return itr;
-                }
-            }
-            return _connections->end();
-        }
-
         std::string int2str(long num) {
 
             std::stringstream string_stream;
@@ -228,7 +213,8 @@ private:
     };
 
     int _port, _max_connections, _socket;
-    std::list<Connection> _connections;
+    std::map<int, Connection> _connections;
+    std::map<int, std::string> _hosts;
     std::string _config_path;
     pthread_t _cleaner;
 
@@ -251,7 +237,7 @@ public:
             }
             config_stream.close();
         }
-        for (int i = 1; i < argc; ++i) {
+        for (int i = 1; i < argc; i++) {
             if (!strcmp(argv[i], "-p") && i + 1 < argc) {
                 _port = atoi(argv[++i]);
             }
@@ -290,7 +276,6 @@ public:
 
     void start_server() {
 
-        long id = 0;
         socklen_t address_size = sizeof (sockaddr_in);
         sockaddr_in address;
 
@@ -307,14 +292,20 @@ public:
         while (true) {
 
             int socket;
+            std::pair < std::map<int, Connection>::iterator, bool> pair;
 
             socket = accept(_socket, (sockaddr *) & address, &address_size);
             if (_connections.size() == (size_t) _max_connections) {
                 close(socket);
             }
             else {
-                _connections.push_back(Connection(++id, socket, &_connections));
-                pthread_create(&_connections.back()._connection, NULL, &Connection::connection, &_connections.back());
+                pair = _connections.insert(std::make_pair(socket, Connection(socket, &_connections, &_hosts)));
+                if (!pair.second) {
+                    close(socket);
+                }
+                else {
+                    pthread_create(&pair.first->second._connection, NULL, &Connection::connection, &pair.first->second);
+                }
             }
         }
     }
@@ -332,24 +323,23 @@ private:
     void *cleaner() {
 
         double time_inactive;
-        std::list<Connection>::iterator itr;
+        std::map<int, Connection>::iterator itr;
 
         signal(SIGTERM, exit);
         while (true) {
             sleep(1);
             itr = _connections.begin();
             while (itr != _connections.end()) {
-                time_inactive = difftime(time(NULL), itr->_time);
-                itr->_bytes = 0;
-                if (itr->_terminated) {
-                    itr = _connections.erase(itr);
+                time_inactive = difftime(time(NULL), itr->second._time);
+                if (itr->second._terminated) {
+                    _connections.erase(itr++);
                 }
                 else if (time_inactive >= __timeout) {
-                    itr->terminate();
-                    itr = _connections.erase(itr);
+                    itr->second.terminate();
+                    _connections.erase(itr++);
                 }
                 else {
-                    ++itr;
+                    itr++;
                 }
             }
         }
