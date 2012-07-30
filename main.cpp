@@ -101,12 +101,14 @@ private:
 
         void terminate() {
             if (_peer != NULL) {
+                _hosts->erase(_peer->_socket);
                 pthread_kill(_peer->_connection, SIGTERM);
                 _peer->Send(Block(__null));
                 _peer->_peer = NULL;
                 _peer->_terminated = true;
                 _peer = NULL;
             }
+            _hosts->erase(_socket);
             _terminated = true;
             pthread_exit(NULL);
         }
