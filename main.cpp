@@ -102,8 +102,7 @@ private:
         void terminate() {
             if (_peer == NULL) {
                 _hosts->erase(_socket);
-            }
-            else {
+            } else {
                 pthread_kill(_peer->_connection, SIGTERM);
                 _peer->Send(Block(__null));
                 _peer->_peer = NULL;
@@ -125,14 +124,11 @@ private:
                 Recv(block);
                 if (block.cmd() == __keep_alive) {
                     time(&_time);
-                }
-                else if (block.cmd() == __set_name && _peer == NULL) {
+                } else if (block.cmd() == __set_name && _peer == NULL) {
                     _name = block.str();
-                }
-                else if (block.cmd() == __set_available && _peer == NULL) {
+                } else if (block.cmd() == __set_available && _peer == NULL) {
                     _hosts->insert(std::make_pair(_socket, _name));
-                }
-                else if (block.cmd() == __get_hosts && _peer == NULL) {
+                } else if (block.cmd() == __get_hosts && _peer == NULL) {
 
                     std::map<int, std::string>::iterator itr;
 
@@ -141,52 +137,44 @@ private:
                         Send(Block(__null, int2str(itr->first)));
                         Send(Block(__null, itr->second));
                     }
-                }
-                else if (block.cmd() == __try_host && _peer == NULL) {
+                } else if (block.cmd() == __try_host && _peer == NULL) {
 
                     std::map<int, Connection>::iterator itr;
 
                     itr = _connections->find(block.num());
                     if (itr == _connections->end()) {
                         terminate();
-                    }
-                    else {
+                    } else {
                         itr->second.Send(Block(__null, int2str(_socket)));
                         itr->second.Send(Block(__null, _name));
                         _hosts->erase(itr->first);
                     }
-                }
-                else if (block.cmd() == __accept_client && _peer == NULL) {
+                } else if (block.cmd() == __accept_client && _peer == NULL) {
 
                     std::map<int, Connection>::iterator itr;
 
                     itr = _connections->find(block.num());
                     if (itr == _connections->end()) {
                         terminate();
-                    }
-                    else {
+                    } else {
                         _peer = &itr->second;
                         itr->second._peer = this;
                         _peer->Send(block);
                     }
-                }
-                else if (block.cmd() == __decline_client && _peer == NULL) {
+                } else if (block.cmd() == __decline_client && _peer == NULL) {
 
                     std::map<int, Connection>::iterator itr;
 
                     itr = _connections->find(block.num());
                     if (itr == _connections->end()) {
                         terminate();
-                    }
-                    else {
+                    } else {
                         itr->second.Send(block);
                         _hosts->insert(std::make_pair(_socket, _name));
                     }
-                }
-                else if (block.cmd() == __send_data && _peer != NULL) {
+                } else if (block.cmd() == __send_data && _peer != NULL) {
                     _peer->Send(block);
-                }
-                else {
+                } else {
                     terminate();
                 }
             }
@@ -233,8 +221,7 @@ public:
             while (std::getline(config_stream, line)) {
                 if (line.substr(0, 5) == "port=") {
                     _port = atoi(line.substr(5).c_str());
-                }
-                else if (line.substr(0, 16) == "max_connections=") {
+                } else if (line.substr(0, 16) == "max_connections=") {
                     _max_connections = atoi(line.substr(16).c_str());
                 }
             }
@@ -243,15 +230,12 @@ public:
         for (int i = 1; i < argc; i++) {
             if (!strcmp(argv[i], "-p") && i + 1 < argc) {
                 _port = atoi(argv[++i]);
-            }
-            else if (!strcmp(argv[i], "-c") && i + 1 < argc) {
+            } else if (!strcmp(argv[i], "-c") && i + 1 < argc) {
                 _max_connections = atoi(argv[++i]);
-            }
-            else if (!strcmp(argv[i], "--help")) {
+            } else if (!strcmp(argv[i], "--help")) {
                 std::cerr << "SafeChat-Server - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n\t-p <port> Port to bind to.\n\t\t\t(from 1 to 65535)\n\t-c <numb> Maximum number of connections.\n\t--help    Displays this message.\n";
                 exit(EXIT_SUCCESS);
-            }
-            else {
+            } else {
                 std::cerr << "Invalid argument (" << argv[i] << "). Enter \"safechat-server --help\" for details.\n";
                 exit(EXIT_FAILURE);
             }
@@ -270,8 +254,7 @@ public:
         std::ofstream config_stream(_config_path.c_str());
         if (!config_stream) {
             std::cerr << "Error writing configuration file to " << _config_path << ".\n";
-        }
-        else {
+        } else {
             config_stream << "Configuration file for SafeChat-Server\n\nport=" << _port << "\nmax_connections=" << _max_connections;
             config_stream.close();
         }
@@ -300,13 +283,11 @@ public:
             socket = accept(_socket, (sockaddr *) & address, &address_size);
             if (_connections.size() == (size_t) _max_connections) {
                 close(socket);
-            }
-            else {
+            } else {
                 pair = _connections.insert(std::make_pair(socket, Connection(socket, &_connections, &_hosts)));
                 if (!pair.second) {
                     close(socket);
-                }
-                else {
+                } else {
                     pthread_create(&pair.first->second._connection, NULL, &Connection::connection, &pair.first->second);
                 }
             }
@@ -336,12 +317,10 @@ private:
                 time_inactive = difftime(time(NULL), itr->second._time);
                 if (itr->second._terminated) {
                     _connections.erase(itr++);
-                }
-                else if (time_inactive >= __timeout) {
+                } else if (time_inactive >= __timeout) {
                     itr->second.terminate();
                     _connections.erase(itr++);
-                }
-                else {
+                } else {
                     itr++;
                 }
             }
