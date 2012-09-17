@@ -34,7 +34,7 @@
 #define __accept_client 7
 #define __send_data 8
 
-class LocalHost {
+class Server {
 private:
 
     class Block {
@@ -52,17 +52,17 @@ private:
             strncpy((char *) &_data[1], string.c_str(), __block_size - 1);
         }
 
-        Block(int cmd, const char *c_string) {
+        Block(int cmd, const long num) {
+
+            std::stringstream string_stream;
+
+            string_stream << num;
             _data[0] = (unsigned char) cmd;
-            strncpy((char *) &_data[1], c_string, __block_size - 1);
+            strncpy((char *) &_data[1], string_stream.str().c_str(), __block_size - 1);
         }
 
         int cmd() const {
             return (int) _data[0];
-        }
-
-        const unsigned char *bin() const {
-            return &_data[1];
         }
 
         const std::string str() const {
@@ -132,9 +132,9 @@ private:
 
                     std::map<int, std::string>::iterator itr;
 
-                    Send(Block(__null, int2str(_hosts->size())));
+                    Send(Block(__null, _hosts->size()));
                     for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
-                        Send(Block(__null, int2str(itr->first)));
+                        Send(Block(__null, itr->first));
                         Send(Block(__null, itr->second));
                     }
                 } else if (block.cmd() == __try_host && _peer == NULL) {
@@ -145,7 +145,7 @@ private:
                     if (itr == _connections->end()) {
                         terminate();
                     } else {
-                        itr->second.Send(Block(__null, int2str(_socket)));
+                        itr->second.Send(Block(__null, _socket));
                         itr->second.Send(Block(__null, _name));
                         _hosts->erase(itr->first);
                     }
@@ -193,14 +193,6 @@ private:
             }
             return output;
         }
-
-        std::string int2str(long num) {
-
-            std::stringstream string_stream;
-
-            string_stream << num;
-            return string_stream.str();
-        }
     };
 
     int _port, _max_connections, _socket;
@@ -211,7 +203,7 @@ private:
 
 public:
 
-    LocalHost(int argc, char *argv[]) {
+    Server(int argc, char *argv[]) {
 
         std::string line;
 
@@ -250,7 +242,7 @@ public:
         }
     }
 
-    ~LocalHost() {
+    ~Server() {
         std::ofstream config_stream(_config_path.c_str());
         if (!config_stream) {
             std::cerr << "Error writing configuration file to " << _config_path << ".\n";
@@ -265,7 +257,7 @@ public:
         socklen_t address_size = sizeof (sockaddr_in);
         sockaddr_in address;
 
-        pthread_create(&_cleaner, NULL, &LocalHost::cleaner, this);
+        pthread_create(&_cleaner, NULL, &Server::cleaner, this);
         _socket = socket(AF_INET, SOCK_STREAM, 0);
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
@@ -294,8 +286,8 @@ public:
         }
     }
 
-    static void *cleaner(void *local_host) {
-        return ((LocalHost *) local_host)->cleaner();
+    static void *cleaner(void *server) {
+        return ((Server *) server)->cleaner();
     }
 
     static void exit(int signal) {
@@ -329,19 +321,19 @@ private:
     }
 };
 
-LocalHost *local_host;
+Server *server;
 
 void save_config_wrapper(int signal) {
-    delete local_host;
+    delete server;
     exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
 
-    local_host = new LocalHost(argc, argv);
+    server = new Server(argc, argv);
 
     signal(SIGINT, save_config_wrapper);
-    local_host->start_server();
-    delete local_host;
+    server->start_server();
+    delete server;
     return 0;
 }
