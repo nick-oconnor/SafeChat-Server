@@ -105,10 +105,12 @@ private:
             } else {
                 pthread_kill(_peer->_connection, SIGTERM);
                 _peer->Send(Block(__null));
+                close(_peer->_socket);
                 _peer->_peer = NULL;
                 _peer->_terminated = true;
                 _peer = NULL;
             }
+            close(_socket);
             _terminated = true;
             pthread_exit(NULL);
         }
