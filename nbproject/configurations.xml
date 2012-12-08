@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="80">
+<configurationDescriptor version="84">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>README</itemPath>
+      <itemPath>block.cpp</itemPath>
+      <itemPath>block.h</itemPath>
       <itemPath>main.cpp</itemPath>
+      <itemPath>server.cpp</itemPath>
+      <itemPath>server.h</itemPath>
+      <itemPath>socket.cpp</itemPath>
+      <itemPath>socket.h</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"

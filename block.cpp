@@ -13,20 +13,27 @@
   <http://www.gnu.org/licenses/>
  */
 
-#include <iostream>
-#include "server.h"
+#include "block.h"
 
-Server *server;
-
-void main_handler(int signal) {
-    delete server;
-    exit(EXIT_SUCCESS);
+Block::Block(short cmd, const void *data, long size) {
+    _cmd = cmd;
+    _size = size;
+    _data = (char *) malloc(_size);
+    if (data != NULL) {
+        memcpy(_data, data, _size);
+    }
 }
 
-int main(int argc, char *argv[]) {
-    signal(SIGINT, main_handler);
-    server = new Server(argc, argv);
-    server->start();
-    delete server;
-    return EXIT_SUCCESS;
+Block::~Block() {
+    free(_data);
+}
+
+Block &Block::set(short cmd, const void *data, long size) {
+    _cmd = cmd;
+    _size = size;
+    _data = (char *) realloc(_data, _size);
+    if (data != NULL) {
+        memcpy(_data, data, _size);
+    }
+    return *this;
 }

@@ -13,20 +13,22 @@
   <http://www.gnu.org/licenses/>
  */
 
+#ifndef block_h
+#define	block_h
+
 #include <iostream>
-#include "server.h"
 
-Server *server;
+class Block {
+public:
 
-void main_handler(int signal) {
-    delete server;
-    exit(EXIT_SUCCESS);
-}
+    short _cmd;
+    long _size;
+    char *_data;
 
-int main(int argc, char *argv[]) {
-    signal(SIGINT, main_handler);
-    server = new Server(argc, argv);
-    server->start();
-    delete server;
-    return EXIT_SUCCESS;
-}
+    Block(short cmd, const void *data, long size);
+    ~Block();
+
+    Block &set(short cmd, const void *data, long size);
+};
+
+#endif

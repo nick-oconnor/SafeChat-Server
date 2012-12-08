@@ -35,7 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/main.o
+	${OBJECTDIR}/server.o \
+	${OBJECTDIR}/main.o \
+	${OBJECTDIR}/socket.o \
+	${OBJECTDIR}/block.o
 
 
 # C Compiler Flags
@@ -62,10 +65,25 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/safechat-server: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/safechat-server -Wl,-S ${OBJECTFILES} ${LDLIBSOPTIONS} 
 
+${OBJECTDIR}/server.o: server.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/server.o server.cpp
+
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
+
+${OBJECTDIR}/socket.o: socket.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/socket.o socket.cpp
+
+${OBJECTDIR}/block.o: block.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/block.o block.cpp
 
 # Subprojects
 .build-subprojects:
