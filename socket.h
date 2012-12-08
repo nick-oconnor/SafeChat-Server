@@ -16,8 +16,9 @@
 #ifndef connection_h
 #define	connection_h
 
-#include <iostream>
 #include <map>
+#include <pthread.h>
+#include <signal.h>
 #include <netdb.h>
 #include "block.h"
 

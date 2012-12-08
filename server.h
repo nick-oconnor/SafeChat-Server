@@ -16,12 +16,8 @@
 #ifndef server_h
 #define	server_h
 
-#include <iostream>
 #include <fstream>
 #include <map>
-#include <stdlib.h>
-#include <signal.h>
-#include <netdb.h>
 #include "socket.h"
 
 class Server {
