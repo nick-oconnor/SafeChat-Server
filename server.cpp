@@ -33,11 +33,12 @@ Server::Server(int argc, char *argv[]) {
         config_file.close();
     }
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-p") && i + 1 < argc) {
+        str = argv[i];
+        if (str == "-p" && i + 1 < argc) {
             _port = atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-c") && i + 1 < argc) {
+        } else if (str == "-c" && i + 1 < argc) {
             _max_sockets = atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "-v")) {
+        } else if (str == "-v") {
             std::cout << "SafeChat-Server version " << __version << "\n";
             exit(EXIT_SUCCESS);
         } else {
