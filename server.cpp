@@ -106,7 +106,7 @@ void *Server::cleaner() {
         sleep(1);
         itr = _sockets.begin();
         while (itr != _sockets.end()) {
-            if (itr->second->_terminate || difftime(time(NULL), itr->second->_time) > __timeout) {
+            if (itr->second->_terminated) {
                 delete itr->second;
                 _sockets.erase(itr++);
             } else {

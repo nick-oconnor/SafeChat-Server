@@ -22,24 +22,21 @@
 #include <netdb.h>
 #include "block.h"
 
-#define __version               1
-#define __timeout               20
+#define __version               2
 
-#define __keep_alive            1
-#define __set_name              2
-#define __set_available         3
-#define __get_hosts             4
-#define __try_host              5
-#define __decline_client        6
-#define __accept_client         7
-#define __data                  8
-#define __disconnect            9
+#define __set_name              1
+#define __set_available         2
+#define __get_hosts             3
+#define __try_host              4
+#define __decline_client        5
+#define __accept_client         6
+#define __data                  7
+#define __disconnect            8
 
 class Socket {
 public:
 
-    bool _terminate;
-    time_t _time;
+    bool _terminated;
     pthread_t _listener;
 
     Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts);

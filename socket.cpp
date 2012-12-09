@@ -21,9 +21,8 @@ Socket::Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map
     _full = full;
     _sockets = sockets;
     _hosts = hosts;
-    _terminate = false;
+    _terminated = false;
     _peer = NULL;
-    time(&_time);
 }
 
 void *Socket::listener() {
@@ -37,7 +36,7 @@ void *Socket::listener() {
         print_log("Server full, connection dropped");
         terminate();
     }
-    while (!_terminate) {
+    while (true) {
         if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL)) {
             print_log("Connection dropped");
             terminate();
@@ -53,7 +52,6 @@ void *Socket::listener() {
                 terminate();
             }
         }
-        time(&_time);
         if (block._cmd == __set_name && _peer == NULL) {
             _name = std::string(block._data);
             print_log("Set name to: " + _name);
@@ -105,7 +103,7 @@ void *Socket::listener() {
             }
         } else if (block._cmd == __data && _peer != NULL) {
             _peer->send_block(block);
-        } else if (block._cmd != __keep_alive) {
+        } else {
             print_log("Received disconnect command");
             terminate();
         }
@@ -141,12 +139,12 @@ void Socket::terminate() {
         _peer->send_block(block.set(__disconnect, NULL, 0));
         close(_peer->_socket);
         _peer->print_log("Disconnect command sent");
-        _peer->_terminate = true;
+        _peer->_terminated = true;
         _peer->_peer = NULL;
         _peer = NULL;
     }
     close(_socket);
-    _terminate = true;
+    _terminated = true;
     pthread_exit(NULL);
 }
 
