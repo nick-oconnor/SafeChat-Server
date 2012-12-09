@@ -43,18 +43,18 @@ Server::Server(int argc, char *argv[]) {
             exit(EXIT_SUCCESS);
         } else {
             print_help();
-            std::cerr << "SafeChat-Server: Unknown argument '" << argv[i] << "'\n";
+            std::cerr << "SafeChat-Server: unknown argument '" << argv[i] << "'\n";
             exit(EXIT_FAILURE);
         }
     }
     if (_port < 1 || _port > 65535) {
         print_help();
-        std::cerr << "SafeChat-Server: Invalid port number\n";
+        std::cerr << "SafeChat-Server: invalid port number\n";
         exit(EXIT_FAILURE);
     }
     if (_max_sockets < 1) {
         print_help();
-        std::cerr << "SafeChat-Server: Invalid number of maximum connections\n";
+        std::cerr << "SafeChat-Server: invalid number of maximum connections\n";
         exit(EXIT_FAILURE);
     }
 }
