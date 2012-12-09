@@ -147,7 +147,7 @@ void Socket::terminate() {
     }
     close(_socket);
     _terminate = true;
-    pthread_kill(_listener, SIGTERM);
+    pthread_exit(NULL);
 }
 
 void Socket::print_log(const std::string &str) {
