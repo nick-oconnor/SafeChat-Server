@@ -109,7 +109,7 @@ void *Server::cleaner() {
             if (itr->second->_terminated) {
                 delete itr->second;
                 _sockets.erase(itr++);
-            } else if (difftime(itr->second->_time, time(NULL)) > __time_out) {
+            } else if (difftime(time(NULL), itr->second->_time) > __time_out) {
                 pthread_kill(itr->second->_listener, SIGTERM);
                 itr->second->terminate();
                 delete itr->second;
