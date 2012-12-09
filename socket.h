@@ -43,7 +43,6 @@ public:
     pthread_t _listener;
 
     Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts);
-    ~Socket();
 
     static void *listener(void *socket) {
         return ((Socket *) socket)->listener();

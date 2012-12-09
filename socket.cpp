@@ -26,10 +26,6 @@ Socket::Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map
     time(&_time);
 }
 
-Socket::~Socket() {
-    terminate();
-}
-
 void *Socket::listener() {
 
     Block block(0, NULL, 0);
