@@ -54,7 +54,7 @@ Server::Server(int argc, char *argv[]) {
     }
     if (_max_sockets < 1) {
         print_help();
-        std::cerr << "SafeChat-Server: invalid number of maximum connections\n";
+        std::cerr << "SafeChat-Server: invalid number of max sockets\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -118,5 +118,5 @@ void *Server::cleaner() {
 }
 
 void Server::print_help() {
-    std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specify the port the server binds to\n    -c <numb> Specify the maximum number of connections the server accepts\n    -v Displays the version\n\n" << std::flush;
+    std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -c <numb> Specifies the maximum number of sockets the server opens\n    -v Displays the version\n\n" << std::flush;
 }
