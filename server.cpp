@@ -92,7 +92,7 @@ void Server::start() {
     listen(_socket, 3);
     while (true) {
         new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
-        pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() == (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
+        pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() >= (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
         pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
         pair.first->second->print_log("Connection established, listener thread created");
     }
