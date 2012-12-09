@@ -20,7 +20,7 @@ Server::Server(int argc, char *argv[]) {
     std::string str;
     std::ifstream config_file;
 
-    _config_path = std::string(getenv("HOME")) + "/.SafeChat-server";
+    _config_path = std::string(getenv("HOME")) + "/.safechat-server";
     config_file.open(_config_path.c_str());
     if (config_file) {
         while (std::getline(config_file, str)) {
