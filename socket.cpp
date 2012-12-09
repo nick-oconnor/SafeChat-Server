@@ -23,6 +23,24 @@ Socket::Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map
     _hosts = hosts;
     _terminated = false;
     _peer = NULL;
+    time(&_time);
+}
+
+void Socket::terminate() {
+
+    Block block(0, NULL, 0);
+
+    _hosts->erase(_socket);
+    if (_peer != NULL) {
+        _peer->send_block(block.set(__disconnect, NULL, 0));
+        close(_peer->_socket);
+        _peer->print_log("Disconnect command sent");
+        _peer->_terminated = true;
+        _peer->_peer = NULL;
+        _peer = NULL;
+    }
+    close(_socket);
+    _terminated = true;
 }
 
 void *Socket::listener() {
@@ -35,23 +53,28 @@ void *Socket::listener() {
     if (_full) {
         print_log("Server full, connection dropped");
         terminate();
+        pthread_exit(NULL);
     }
     while (true) {
         if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL)) {
             print_log("Connection dropped");
             terminate();
+            pthread_exit(NULL);
         }
         if (!recv(_socket, &block._size, sizeof block._size, MSG_WAITALL)) {
             print_log("Connection dropped");
             terminate();
+            pthread_exit(NULL);
         }
         block.set(block._cmd, NULL, block._size);
         if (block._size) {
             if (!recv(_socket, block._data, block._size, MSG_WAITALL)) {
                 print_log("Connection dropped");
                 terminate();
+                pthread_exit(NULL);
             }
         }
+        time(&_time);
         if (block._cmd == __set_name && _peer == NULL) {
             _name = std::string(block._data);
             print_log("Set name to: " + _name);
@@ -103,9 +126,10 @@ void *Socket::listener() {
             }
         } else if (block._cmd == __data && _peer != NULL) {
             _peer->send_block(block);
-        } else {
+        } else if (block._cmd != __keep_alive) {
             print_log("Received disconnect command");
             terminate();
+            pthread_exit(NULL);
         }
     }
     return NULL;
@@ -126,26 +150,6 @@ void Socket::send_block(Block &block) {
             terminate();
         }
     }
-}
-
-void Socket::terminate() {
-
-    Block block(0, NULL, 0);
-
-    if (_peer == NULL) {
-        _hosts->erase(_socket);
-    } else {
-        pthread_kill(_peer->_listener, SIGTERM);
-        _peer->send_block(block.set(__disconnect, NULL, 0));
-        close(_peer->_socket);
-        _peer->print_log("Disconnect command sent");
-        _peer->_terminated = true;
-        _peer->_peer = NULL;
-        _peer = NULL;
-    }
-    close(_socket);
-    _terminated = true;
-    pthread_exit(NULL);
 }
 
 void Socket::print_log(const std::string &str) {
