@@ -45,6 +45,7 @@ public:
     Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts);
 
     void terminate();
+    void print_log(const std::string &str);
 
     static void *listener(void *socket) {
         return ((Socket *) socket)->listener();
@@ -66,7 +67,6 @@ private:
 
     void *listener();
     void send_block(Block &block);
-    void print_log(const std::string &str);
 };
 
 #endif

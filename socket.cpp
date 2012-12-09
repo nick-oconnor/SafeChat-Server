@@ -43,6 +43,16 @@ void Socket::terminate() {
     _terminated = true;
 }
 
+void Socket::print_log(const std::string &str) {
+
+    time_t time_t = time(NULL);
+    struct tm *tm = localtime(&time_t);
+    char *time = asctime(tm);
+
+    time[strlen(time) - 1] = '\0';
+    std::cout << time << " <" << _socket << "> " << str << "\n" << std::flush;
+}
+
 void *Socket::listener() {
 
     Block block(0, NULL, 0);
@@ -150,14 +160,4 @@ void Socket::send_block(Block &block) {
             terminate();
         }
     }
-}
-
-void Socket::print_log(const std::string &str) {
-
-    time_t time_t = time(NULL);
-    struct tm *tm = localtime(&time_t);
-    char *time = asctime(tm);
-
-    time[strlen(time) - 1] = '\0';
-    std::cout << time << " <" << _socket << "> " << str << "\n" << std::flush;
 }
