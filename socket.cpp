@@ -76,6 +76,11 @@ void *Socket::listener() {
             terminate();
             pthread_exit(NULL);
         }
+        if (block._size > __max_block_size) {
+            print_log("Oversized block received");
+            terminate();
+            pthread_exit(NULL);
+        }
         block.set(block._cmd, NULL, block._size);
         if (block._size) {
             if (!recv(_socket, block._data, block._size, MSG_WAITALL)) {
