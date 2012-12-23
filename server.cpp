@@ -108,6 +108,7 @@ void *Server::cleaner() {
         itr = _sockets.begin();
         while (itr != _sockets.end()) {
             if (itr->second->_terminated) {
+                pthread_kill(itr->second->_listener, SIGTERM);
                 itr->second->print_log("Listener thread terminated");
                 delete itr->second;
                 _sockets.erase(itr++);
