@@ -66,7 +66,7 @@ Server::~Server() {
     pthread_kill(_cleaner, SIGTERM);
     close(_socket);
     if (!config_file) {
-        std::cerr << "Error: can't write '" << _config_path << "'.\n";
+        std::cerr << "Error: can't write " << _config_path << ".\n";
     } else {
         config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
         config_file.close();
