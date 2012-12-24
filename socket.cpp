@@ -32,9 +32,10 @@ void Socket::terminate() {
 
     _hosts->erase(_socket);
     if (_peer != NULL) {
+        _peer->print_log("Disconnect command sent, listener terminated");
         _peer->send_block(block.set(__disconnect, NULL, 0));
+        pthread_kill(_peer->_listener, SIGTERM);
         close(_peer->_socket);
-        _peer->print_log("Disconnect command sent");
         _peer->_terminated = true;
         _peer->_peer = NULL;
         _peer = NULL;
@@ -58,32 +59,33 @@ void *Socket::listener() {
     Block block(0, NULL, 0);
 
     signal(SIGTERM, thread_handler);
+    print_log("Connection established, listener created");
     send_block(block.set(0, &_version, sizeof _version));
     send_block(block.set(0, &_full, sizeof _full));
     if (_full) {
-        print_log("Server full, connection dropped");
+        print_log("Server full, connection suspended");
         pthread_exit(NULL);
     }
     while (true) {
         if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL)) {
-            print_log("Connection dropped");
+            print_log("Dropped connection, listener terminated");
             terminate();
             pthread_exit(NULL);
         }
         if (!recv(_socket, &block._size, sizeof block._size, MSG_WAITALL)) {
-            print_log("Connection dropped");
+            print_log("Dropped connection, listener terminated");
             terminate();
             pthread_exit(NULL);
         }
         if (block._size > __max_block_size) {
-            print_log("Oversized block received");
+            print_log("Oversized block received, listener terminated");
             terminate();
             pthread_exit(NULL);
         }
         block.set(block._cmd, NULL, block._size);
         if (block._size) {
             if (!recv(_socket, block._data, block._size, MSG_WAITALL)) {
-                print_log("Connection dropped");
+                print_log("Dropped connection, listener terminated");
                 terminate();
                 pthread_exit(NULL);
             }
@@ -141,7 +143,7 @@ void *Socket::listener() {
         } else if (block._cmd == __data && _peer != NULL) {
             _peer->send_block(block);
         } else if (block._cmd != __keep_alive) {
-            print_log("Received disconnect command");
+            print_log("Disconnect command received, listener terminated");
             terminate();
             pthread_exit(NULL);
         }
@@ -150,18 +152,9 @@ void *Socket::listener() {
 }
 
 void Socket::send_block(Block &block) {
-    if (!send(_socket, &block._cmd, sizeof block._cmd, 0)) {
-        print_log("Connection dropped");
-        terminate();
-    }
-    if (!send(_socket, &block._size, sizeof block._size, 0)) {
-        print_log("Connection dropped");
-        terminate();
-    }
+    send(_socket, &block._cmd, sizeof block._cmd, 0);
+    send(_socket, &block._size, sizeof block._size, 0);
     if (block._size) {
-        if (!send(_socket, block._data, block._size, 0)) {
-            print_log("Connection dropped");
-            terminate();
-        }
+        send(_socket, block._data, block._size, 0);
     }
 }

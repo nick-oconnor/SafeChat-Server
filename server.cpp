@@ -94,7 +94,6 @@ void Server::start() {
         new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
         pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() >= (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
         pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
-        pair.first->second->print_log("Connection established, listener thread created");
     }
 }
 
@@ -108,14 +107,12 @@ void *Server::cleaner() {
         itr = _sockets.begin();
         while (itr != _sockets.end()) {
             if (itr->second->_terminated) {
-                pthread_kill(itr->second->_listener, SIGTERM);
-                itr->second->print_log("Listener thread terminated");
                 delete itr->second;
                 _sockets.erase(itr++);
             } else if (difftime(time(NULL), itr->second->_time) > __time_out) {
+                itr->second->print_log("Connection timed out, listener terminated");
                 pthread_kill(itr->second->_listener, SIGTERM);
                 itr->second->terminate();
-                itr->second->print_log("Connection timed out, listener thread terminated");
                 delete itr->second;
                 _sockets.erase(itr++);
             } else {
