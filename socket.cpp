@@ -62,7 +62,6 @@ void *Socket::listener() {
     send_block(block.set(0, &_full, sizeof _full));
     if (_full) {
         print_log("Server full, connection dropped");
-        terminate();
         pthread_exit(NULL);
     }
     while (true) {
