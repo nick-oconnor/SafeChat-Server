@@ -49,7 +49,7 @@ Server::Server(int argc, char *argv[]) {
             throw "invalid number of max sockets";
     } catch (std::string error) {
         std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n    -v Displays the version\n\n" << std::flush;
-        std::cerr << "SafeChat-Server: " << error << "\n";
+        std::cerr << "SafeChat-Server: " << error << ".\n";
         exit(EXIT_FAILURE);
     }
 }
