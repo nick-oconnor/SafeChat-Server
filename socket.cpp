@@ -64,19 +64,19 @@ void *Socket::listener() {
     send_block(block.set(0, &_full, sizeof _full));
     try {
         if (_full)
-            throw "Server full, connection suspended";
+            throw std::runtime_error("Server full, connection suspended");
         while (true)
             try {
                 if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL))
-                    throw "Dropped connection, listener terminated";
+                    throw std::runtime_error("Dropped connection, listener terminated");
                 if (!recv(_socket, &block._size, sizeof block._size, MSG_WAITALL))
-                    throw "Dropped connection, listener terminated";
+                    throw std::runtime_error("Dropped connection, listener terminated");
                 if (block._size > __max_block_size)
-                    throw "Oversized block received, listener terminated";
+                    throw std::runtime_error("Oversized block received, listener terminated");
                 block.set(block._cmd, NULL, block._size);
                 if (block._size)
                     if (!recv(_socket, block._data, block._size, MSG_WAITALL))
-                        throw "Dropped connection, listener terminated";
+                        throw std::runtime_error("Dropped connection, listener terminated");
                 time(&_time);
                 if (block._cmd == __set_name && _peer == NULL) {
                     _name = std::string(block._data);
@@ -130,14 +130,14 @@ void *Socket::listener() {
                 } else if (block._cmd == __send_data && _peer != NULL)
                     _peer->send_block(block);
                 else if (block._cmd != __keep_alive)
-                    throw "Disconnect command received, listener terminated";
-            } catch (std::string error) {
-                log(error);
+                    throw std::runtime_error("Disconnect command received, listener terminated");
+            } catch (const std::exception &exception) {
+                log(exception.what());
                 terminate();
                 pthread_exit(NULL);
             }
-    } catch (std::string error) {
-        log(error);
+    } catch (const std::exception &exception) {
+        log(exception.what());
         pthread_exit(NULL);
     }
     return NULL;

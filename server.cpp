@@ -41,15 +41,15 @@ Server::Server(int argc, char *argv[]) {
                 std::cout << "SafeChat-Server version " << __version << "\n";
                 exit(EXIT_SUCCESS);
             } else
-                throw "unknown argument '" + std::string(argv[i]) + "'";
+                throw std::runtime_error("unknown argument '" + std::string(argv[i]) + "'");
         }
         if (_port < 1 || _port > 65535)
-            throw "invalid port number";
+            throw std::runtime_error("invalid port number");
         if (_max_sockets < 1)
-            throw "invalid number of max sockets";
-    } catch (std::string error) {
+            throw std::runtime_error("invalid number of max sockets");
+    } catch (const std::exception &exception) {
         std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n    -v Displays the version\n\n" << std::flush;
-        std::cerr << "SafeChat-Server: " << error << ".\n";
+        std::cerr << "SafeChat-Server: " << exception.what() << ".\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -62,13 +62,11 @@ Server::~Server() {
         pthread_kill(_cleaner, SIGTERM);
         close(_socket);
         if (!config_file)
-            throw "can't write " + _config_path;
-        else {
-            config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
-            config_file.close();
-        }
-    } catch (std::string error) {
-        std::cerr << "Error: " << error << ".\n";
+            throw std::runtime_error("can't write " + _config_path);
+        config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
+        config_file.close();
+    } catch (const std::exception &exception) {
+        std::cerr << "Error: " << exception.what() << ".\n";
     }
 }
 
@@ -85,7 +83,7 @@ void Server::start() {
         addr.sin_addr.s_addr = INADDR_ANY;
         addr.sin_port = htons(_port);
         if (bind(_socket, (sockaddr *) & addr, sizeof addr))
-            throw "can't bind to port " + _port;
+            throw std::runtime_error("can't bind to port " + _port);
         pthread_create(&_cleaner, NULL, &Server::cleaner, this);
         listen(_socket, 3);
         while (true) {
@@ -93,8 +91,8 @@ void Server::start() {
             pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() >= (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
             pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
         }
-    } catch (std::string error) {
-        std::cerr << "Error: " << error << ".\n";
+    } catch (const std::exception &exception) {
+        std::cerr << "Error: " << exception.what() << ".\n";
         exit(EXIT_FAILURE);
     }
 }

@@ -17,6 +17,7 @@
 #define	connection_h
 
 #include <map>
+#include <stdexcept>
 #include <pthread.h>
 #include <signal.h>
 #include <netdb.h>
