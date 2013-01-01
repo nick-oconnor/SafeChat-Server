@@ -73,7 +73,7 @@ Server::~Server() {
 void Server::start() {
 
     int new_socket;
-    std::pair < std::map<int, Socket *>::iterator, bool> pair;
+    std::pair < Socket::socket_t::iterator, bool> pair;
     socklen_t addr_size = sizeof (sockaddr_in);
     sockaddr_in addr;
 
@@ -99,7 +99,7 @@ void Server::start() {
 
 void *Server::cleaner() {
 
-    std::map<int, Socket *>::iterator itr;
+    Socket::socket_t::iterator itr;
 
     signal(SIGTERM, thread_handler);
     while (true) {

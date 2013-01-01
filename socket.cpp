@@ -15,7 +15,7 @@
 
 #include "socket.h"
 
-Socket::Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts) {
+Socket::Socket(int socket, bool full, socket_t *sockets, host_t *hosts) {
     _version = __version;
     _socket = socket;
     _full = full;
@@ -87,7 +87,7 @@ void *Socket::listener() {
                 } else if (block._cmd == __get_hosts && _peer == NULL) {
 
                     int hosts_size = _hosts->size();
-                    std::map<int, std::string>::iterator itr;
+                    host_t::iterator itr;
 
                     send_block(block.set(0, &hosts_size, sizeof hosts_size));
                     for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
@@ -97,7 +97,7 @@ void *Socket::listener() {
                     log("Hosts list sent");
                 } else if (block._cmd == __try_host && _peer == NULL) {
 
-                    std::map<int, Socket *>::iterator itr;
+                    socket_t::iterator itr;
 
                     itr = _sockets->find(*(int *) block._data);
                     if (itr != _sockets->end()) {
@@ -108,7 +108,7 @@ void *Socket::listener() {
                     }
                 } else if (block._cmd == __accept_client && _peer == NULL) {
 
-                    std::map<int, Socket *>::iterator itr;
+                    socket_t::iterator itr;
 
                     itr = _sockets->find(*(int *) block._data);
                     if (itr != _sockets->end()) {
@@ -119,7 +119,7 @@ void *Socket::listener() {
                     }
                 } else if (block._cmd == __decline_client && _peer == NULL) {
 
-                    std::map<int, Socket *>::iterator itr;
+                    socket_t::iterator itr;
 
                     itr = _sockets->find(*(int *) block._data);
                     if (itr != _sockets->end()) {

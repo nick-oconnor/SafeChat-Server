@@ -41,11 +41,14 @@
 class Socket {
 public:
 
+    typedef std::map<int, Socket *> socket_t;
+    typedef std::map<int, std::string> host_t;
+
     bool _terminated;
     time_t _time;
     pthread_t _listener;
 
-    Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts);
+    Socket(int socket, bool full, socket_t *sockets, host_t *hosts);
 
     void terminate();
     void log(const std::string &str);
@@ -65,8 +68,8 @@ private:
     int _socket;
     std::string _name;
     Socket *_peer;
-    std::map<int, Socket *> *_sockets;
-    std::map<int, std::string> *_hosts;
+    socket_t *_sockets;
+    host_t *_hosts;
 
     void *listener();
     void send_block(Block &block);
