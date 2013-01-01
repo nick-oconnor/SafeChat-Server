@@ -25,7 +25,7 @@ void main_handler(int signal) {
 int main(int argc, char *argv[]) {
     signal(SIGINT, main_handler);
     server = new Server(argc, argv);
-    server->start();
+    server->start_server();
     delete server;
     return EXIT_SUCCESS;
 }

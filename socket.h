@@ -23,18 +23,20 @@
 #include <netdb.h>
 #include "block.h"
 
-#define __version           4
-#define __time_out          60
+#define __version           1.5
+#define __timeout           60
 
-#define __keep_alive        1
-#define __set_name          2
-#define __set_available     3
-#define __get_hosts         4
-#define __try_host          5
-#define __decline_client    6
-#define __accept_client     7
-#define __send_data         8
-#define __disconnect        9
+#define __keepalive         1
+#define __protocol          2
+#define __full              3
+#define __name              4
+#define __available         5
+#define __hosts             6
+#define __try               7
+#define __decline           8
+#define __accept            9
+#define __data              10
+#define __disconnect        11
 
 #define __max_block_size    1000000
 
@@ -48,10 +50,11 @@ public:
     time_t _time;
     pthread_t _listener;
 
-    Socket(int socket, bool full, socket_t *sockets, host_t *hosts);
+    Socket(int id, int socket, socket_t *sockets, host_t *hosts);
 
+    void send_block(const Block &block);
+    void log(const std::string &string);
     void terminate();
-    void log(const std::string &str);
 
     static void *listener(void *socket) {
         return ((Socket *) socket)->listener();
@@ -63,16 +66,13 @@ public:
 
 private:
 
-    bool _full;
-    short _version;
-    int _socket;
+    int _id, _socket;
     std::string _name;
     Socket *_peer;
     socket_t *_sockets;
     host_t *_hosts;
 
     void *listener();
-    void send_block(Block &block);
 };
 
 #endif

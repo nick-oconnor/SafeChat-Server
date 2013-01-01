@@ -25,7 +25,7 @@ public:
     Server(int argc, char *argv[]);
     ~Server();
 
-    void start();
+    void start_server();
 
     static void *cleaner(void *server) {
         return ((Server *) server)->cleaner();
