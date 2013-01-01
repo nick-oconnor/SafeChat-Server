@@ -17,27 +17,27 @@
 
 Server::Server(int argc, char *argv[]) {
 
-    std::string str;
+    std::string string;
     std::ifstream config_file;
 
     try {
         _config_path = std::string(getenv("HOME")) + "/.safechat-server";
         config_file.open(_config_path.c_str());
         if (config_file) {
-            while (std::getline(config_file, str))
-                if (str.substr(0, 5) == "port=")
-                    _port = atoi(str.substr(5).c_str());
-                else if (str.substr(0, 12) == "max_sockets=")
-                    _max_sockets = atoi(str.substr(12).c_str());
+            while (std::getline(config_file, string))
+                if (string.substr(0, 5) == "port=")
+                    _port = atoi(string.substr(5).c_str());
+                else if (string.substr(0, 12) == "max_sockets=")
+                    _max_sockets = atoi(string.substr(12).c_str());
             config_file.close();
         }
         for (int i = 1; i < argc; i++) {
-            str = argv[i];
-            if (str == "-p" && i + 1 < argc)
+            string = argv[i];
+            if (string == "-p" && i + 1 < argc)
                 _port = atoi(argv[++i]);
-            else if (str == "-s" && i + 1 < argc)
+            else if (string == "-s" && i + 1 < argc)
                 _max_sockets = atoi(argv[++i]);
-            else if (str == "-v") {
+            else if (string == "-v") {
                 std::cout << "SafeChat-Server version " << __version << "\n";
                 exit(EXIT_SUCCESS);
             } else
@@ -99,24 +99,24 @@ void Server::start() {
 
 void *Server::cleaner() {
 
-    Socket::socket_t::iterator itr;
+    Socket::socket_t::iterator socket;
 
     signal(SIGTERM, thread_handler);
     while (true) {
         sleep(1);
-        itr = _sockets.begin();
-        while (itr != _sockets.end())
-            if (itr->second->_terminated) {
-                delete itr->second;
-                _sockets.erase(itr++);
-            } else if (difftime(time(NULL), itr->second->_time) > __time_out) {
-                itr->second->log("Connection timed out, listener terminated");
-                pthread_kill(itr->second->_listener, SIGTERM);
-                itr->second->terminate();
-                delete itr->second;
-                _sockets.erase(itr++);
+        socket = _sockets.begin();
+        while (socket != _sockets.end())
+            if (socket->second->_terminated) {
+                delete socket->second;
+                _sockets.erase(socket++);
+            } else if (difftime(time(NULL), socket->second->_time) > __time_out) {
+                socket->second->log("Connection timed out, listener terminated");
+                pthread_kill(socket->second->_listener, SIGTERM);
+                socket->second->terminate();
+                delete socket->second;
+                _sockets.erase(socket++);
             } else
-                itr++;
+                socket++;
     }
     return NULL;
 }

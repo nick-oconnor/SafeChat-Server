@@ -23,7 +23,7 @@
 #include <netdb.h>
 #include "block.h"
 
-#define __version           3
+#define __version           4
 #define __time_out          60
 
 #define __keep_alive        1

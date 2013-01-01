@@ -44,18 +44,21 @@ void Socket::terminate() {
     _terminated = true;
 }
 
-void Socket::log(const std::string &str) {
+void Socket::log(const std::string &string) {
 
     time_t time_t = time(NULL);
     struct tm *tm = localtime(&time_t);
     char *time = asctime(tm);
 
     time[strlen(time) - 1] = '\0';
-    std::cout << time << " <" << _socket << "> " << str << "\n" << std::flush;
+    std::cout << time << " <" << _socket << "> " << string << "\n" << std::flush;
 }
 
 void *Socket::listener() {
 
+    int hosts_size;
+    host_t::iterator host;
+    socket_t::iterator socket;
     Block block(0, NULL, 0);
 
     signal(SIGTERM, thread_handler);
@@ -85,47 +88,35 @@ void *Socket::listener() {
                     _hosts->insert(std::make_pair(_socket, _name));
                     log("Set as host");
                 } else if (block._cmd == __get_hosts && _peer == NULL) {
-
-                    int hosts_size = _hosts->size();
-                    host_t::iterator itr;
-
+                    hosts_size = _hosts->size();
                     send_block(block.set(0, &hosts_size, sizeof hosts_size));
-                    for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
-                        send_block(block.set(0, &itr->first, sizeof itr->first));
-                        send_block(block.set(0, itr->second.c_str(), itr->second.size() + 1));
+                    for (host = _hosts->begin(); host != _hosts->end(); host++) {
+                        send_block(block.set(0, &host->first, sizeof host->first));
+                        send_block(block.set(0, host->second.c_str(), host->second.size() + 1));
                     }
                     log("Hosts list sent");
                 } else if (block._cmd == __try_host && _peer == NULL) {
-
-                    socket_t::iterator itr;
-
-                    itr = _sockets->find(*(int *) block._data);
-                    if (itr != _sockets->end()) {
-                        itr->second->send_block(block.set(0, &_socket, sizeof _socket));
-                        itr->second->send_block(block.set(0, _name.c_str(), _name.size() + 1));
-                        _hosts->erase(itr->first);
-                        log("Trying host: " + itr->second->_name);
+                    socket = _sockets->find(*(int *) block._data);
+                    if (socket != _sockets->end()) {
+                        socket->second->send_block(block.set(0, &_socket, sizeof _socket));
+                        socket->second->send_block(block.set(0, _name.c_str(), _name.size() + 1));
+                        _hosts->erase(socket->first);
+                        log("Trying host: " + socket->second->_name);
                     }
                 } else if (block._cmd == __accept_client && _peer == NULL) {
-
-                    socket_t::iterator itr;
-
-                    itr = _sockets->find(*(int *) block._data);
-                    if (itr != _sockets->end()) {
-                        _peer = itr->second;
-                        itr->second->_peer = this;
+                    socket = _sockets->find(*(int *) block._data);
+                    if (socket != _sockets->end()) {
+                        _peer = socket->second;
+                        socket->second->_peer = this;
                         _peer->send_block(block);
-                        log("Accepted client: " + itr->second->_name);
+                        log("Accepted client: " + socket->second->_name);
                     }
                 } else if (block._cmd == __decline_client && _peer == NULL) {
-
-                    socket_t::iterator itr;
-
-                    itr = _sockets->find(*(int *) block._data);
-                    if (itr != _sockets->end()) {
-                        itr->second->send_block(block);
+                    socket = _sockets->find(*(int *) block._data);
+                    if (socket != _sockets->end()) {
+                        socket->second->send_block(block);
                         _hosts->insert(std::make_pair(_socket, _name));
-                        log("Declined client: " + itr->second->_name);
+                        log("Declined client: " + socket->second->_name);
                     }
                 } else if (block._cmd == __send_data && _peer != NULL)
                     _peer->send_block(block);
