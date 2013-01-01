@@ -32,7 +32,7 @@
 #define __try_host          5
 #define __decline_client    6
 #define __accept_client     7
-#define __data              8
+#define __send_data         8
 #define __disconnect        9
 
 #define __max_block_size    1000000
@@ -47,7 +47,7 @@ public:
     Socket(int socket, bool full, std::map<int, Socket *> *sockets, std::map<int, std::string> *hosts);
 
     void terminate();
-    void print_log(const std::string &str);
+    void log(const std::string &str);
 
     static void *listener(void *socket) {
         return ((Socket *) socket)->listener();

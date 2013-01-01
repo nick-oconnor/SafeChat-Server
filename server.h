@@ -45,7 +45,6 @@ private:
     pthread_t _cleaner;
 
     void *cleaner();
-    void print_help();
 };
 
 #endif

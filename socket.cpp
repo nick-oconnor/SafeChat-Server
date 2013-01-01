@@ -32,7 +32,7 @@ void Socket::terminate() {
 
     _hosts->erase(_socket);
     if (_peer != NULL) {
-        _peer->print_log("Disconnect command sent, listener terminated");
+        _peer->log("Disconnect command sent, listener terminated");
         _peer->send_block(block.set(__disconnect, NULL, 0));
         pthread_kill(_peer->_listener, SIGTERM);
         close(_peer->_socket);
@@ -44,7 +44,7 @@ void Socket::terminate() {
     _terminated = true;
 }
 
-void Socket::print_log(const std::string &str) {
+void Socket::log(const std::string &str) {
 
     time_t time_t = time(NULL);
     struct tm *tm = localtime(&time_t);
@@ -59,94 +59,86 @@ void *Socket::listener() {
     Block block(0, NULL, 0);
 
     signal(SIGTERM, thread_handler);
-    print_log("Connection established, listener created");
+    log("Connection established, listener created");
     send_block(block.set(0, &_version, sizeof _version));
     send_block(block.set(0, &_full, sizeof _full));
-    if (_full) {
-        print_log("Server full, connection suspended");
-        pthread_exit(NULL);
-    }
-    while (true) {
-        if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL)) {
-            print_log("Dropped connection, listener terminated");
-            terminate();
-            pthread_exit(NULL);
-        }
-        if (!recv(_socket, &block._size, sizeof block._size, MSG_WAITALL)) {
-            print_log("Dropped connection, listener terminated");
-            terminate();
-            pthread_exit(NULL);
-        }
-        if (block._size > __max_block_size) {
-            print_log("Oversized block received, listener terminated");
-            terminate();
-            pthread_exit(NULL);
-        }
-        block.set(block._cmd, NULL, block._size);
-        if (block._size) {
-            if (!recv(_socket, block._data, block._size, MSG_WAITALL)) {
-                print_log("Dropped connection, listener terminated");
+    try {
+        if (_full)
+            throw "Server full, connection suspended";
+        while (true)
+            try {
+                if (!recv(_socket, &block._cmd, sizeof block._cmd, MSG_WAITALL))
+                    throw "Dropped connection, listener terminated";
+                if (!recv(_socket, &block._size, sizeof block._size, MSG_WAITALL))
+                    throw "Dropped connection, listener terminated";
+                if (block._size > __max_block_size)
+                    throw "Oversized block received, listener terminated";
+                block.set(block._cmd, NULL, block._size);
+                if (block._size)
+                    if (!recv(_socket, block._data, block._size, MSG_WAITALL))
+                        throw "Dropped connection, listener terminated";
+                time(&_time);
+                if (block._cmd == __set_name && _peer == NULL) {
+                    _name = std::string(block._data);
+                    log("Set name to: " + _name);
+                } else if (block._cmd == __set_available && _peer == NULL) {
+                    _hosts->insert(std::make_pair(_socket, _name));
+                    log("Set as host");
+                } else if (block._cmd == __get_hosts && _peer == NULL) {
+
+                    int hosts_size = _hosts->size();
+                    std::map<int, std::string>::iterator itr;
+
+                    send_block(block.set(0, &hosts_size, sizeof hosts_size));
+                    for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
+                        send_block(block.set(0, &itr->first, sizeof itr->first));
+                        send_block(block.set(0, itr->second.c_str(), itr->second.size() + 1));
+                    }
+                    log("Hosts list sent");
+                } else if (block._cmd == __try_host && _peer == NULL) {
+
+                    std::map<int, Socket *>::iterator itr;
+
+                    itr = _sockets->find(*(int *) block._data);
+                    if (itr != _sockets->end()) {
+                        itr->second->send_block(block.set(0, &_socket, sizeof _socket));
+                        itr->second->send_block(block.set(0, _name.c_str(), _name.size() + 1));
+                        _hosts->erase(itr->first);
+                        log("Trying host: " + itr->second->_name);
+                    }
+                } else if (block._cmd == __accept_client && _peer == NULL) {
+
+                    std::map<int, Socket *>::iterator itr;
+
+                    itr = _sockets->find(*(int *) block._data);
+                    if (itr != _sockets->end()) {
+                        _peer = itr->second;
+                        itr->second->_peer = this;
+                        _peer->send_block(block);
+                        log("Accepted client: " + itr->second->_name);
+                    }
+                } else if (block._cmd == __decline_client && _peer == NULL) {
+
+                    std::map<int, Socket *>::iterator itr;
+
+                    itr = _sockets->find(*(int *) block._data);
+                    if (itr != _sockets->end()) {
+                        itr->second->send_block(block);
+                        _hosts->insert(std::make_pair(_socket, _name));
+                        log("Declined client: " + itr->second->_name);
+                    }
+                } else if (block._cmd == __send_data && _peer != NULL)
+                    _peer->send_block(block);
+                else if (block._cmd != __keep_alive)
+                    throw "Disconnect command received, listener terminated";
+            } catch (std::string error) {
+                log(error);
                 terminate();
                 pthread_exit(NULL);
             }
-        }
-        time(&_time);
-        if (block._cmd == __set_name && _peer == NULL) {
-            _name = std::string(block._data);
-            print_log("Set name to: " + _name);
-        } else if (block._cmd == __set_available && _peer == NULL) {
-            _hosts->insert(std::make_pair(_socket, _name));
-            print_log("Set as host");
-        } else if (block._cmd == __get_hosts && _peer == NULL) {
-
-            int hosts_size = _hosts->size();
-            std::map<int, std::string>::iterator itr;
-
-            send_block(block.set(0, &hosts_size, sizeof hosts_size));
-            for (itr = _hosts->begin(); itr != _hosts->end(); itr++) {
-                send_block(block.set(0, &itr->first, sizeof itr->first));
-                send_block(block.set(0, itr->second.c_str(), itr->second.size() + 1));
-            }
-            print_log("Hosts list sent");
-        } else if (block._cmd == __try_host && _peer == NULL) {
-
-            std::map<int, Socket *>::iterator itr;
-
-            itr = _sockets->find(*(int *) block._data);
-            if (itr != _sockets->end()) {
-                print_log("Trying host: " + itr->second->_name);
-                itr->second->send_block(block.set(0, &_socket, sizeof _socket));
-                itr->second->send_block(block.set(0, _name.c_str(), _name.size() + 1));
-                _hosts->erase(itr->first);
-            }
-        } else if (block._cmd == __accept_client && _peer == NULL) {
-
-            std::map<int, Socket *>::iterator itr;
-
-            itr = _sockets->find(*(int *) block._data);
-            if (itr != _sockets->end()) {
-                _peer = itr->second;
-                itr->second->_peer = this;
-                _peer->send_block(block);
-                print_log("Accepted client: " + itr->second->_name);
-            }
-        } else if (block._cmd == __decline_client && _peer == NULL) {
-
-            std::map<int, Socket *>::iterator itr;
-
-            itr = _sockets->find(*(int *) block._data);
-            if (itr != _sockets->end()) {
-                itr->second->send_block(block);
-                _hosts->insert(std::make_pair(_socket, _name));
-                print_log("Declined client: " + itr->second->_name);
-            }
-        } else if (block._cmd == __data && _peer != NULL) {
-            _peer->send_block(block);
-        } else if (block._cmd != __keep_alive) {
-            print_log("Disconnect command received, listener terminated");
-            terminate();
-            pthread_exit(NULL);
-        }
+    } catch (std::string error) {
+        log(error);
+        pthread_exit(NULL);
     }
     return NULL;
 }
@@ -154,7 +146,6 @@ void *Socket::listener() {
 void Socket::send_block(Block &block) {
     send(_socket, &block._cmd, sizeof block._cmd, 0);
     send(_socket, &block._size, sizeof block._size, 0);
-    if (block._size) {
+    if (block._size)
         send(_socket, block._data, block._size, 0);
-    }
 }

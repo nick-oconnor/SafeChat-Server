@@ -20,41 +20,36 @@ Server::Server(int argc, char *argv[]) {
     std::string str;
     std::ifstream config_file;
 
-    _config_path = std::string(getenv("HOME")) + "/.safechat-server";
-    config_file.open(_config_path.c_str());
-    if (config_file) {
-        while (std::getline(config_file, str)) {
-            if (str.substr(0, 5) == "port=") {
-                _port = atoi(str.substr(5).c_str());
-            } else if (str.substr(0, 12) == "max_sockets=") {
-                _max_sockets = atoi(str.substr(12).c_str());
-            }
+    try {
+        _config_path = std::string(getenv("HOME")) + "/.safechat-server";
+        config_file.open(_config_path.c_str());
+        if (config_file) {
+            while (std::getline(config_file, str))
+                if (str.substr(0, 5) == "port=")
+                    _port = atoi(str.substr(5).c_str());
+                else if (str.substr(0, 12) == "max_sockets=")
+                    _max_sockets = atoi(str.substr(12).c_str());
+            config_file.close();
         }
-        config_file.close();
-    }
-    for (int i = 1; i < argc; i++) {
-        str = argv[i];
-        if (str == "-p" && i + 1 < argc) {
-            _port = atoi(argv[++i]);
-        } else if (str == "-s" && i + 1 < argc) {
-            _max_sockets = atoi(argv[++i]);
-        } else if (str == "-v") {
-            std::cout << "SafeChat-Server version " << __version << "\n";
-            exit(EXIT_SUCCESS);
-        } else {
-            print_help();
-            std::cerr << "SafeChat-Server: unknown argument '" << argv[i] << "'\n";
-            exit(EXIT_FAILURE);
+        for (int i = 1; i < argc; i++) {
+            str = argv[i];
+            if (str == "-p" && i + 1 < argc)
+                _port = atoi(argv[++i]);
+            else if (str == "-s" && i + 1 < argc)
+                _max_sockets = atoi(argv[++i]);
+            else if (str == "-v") {
+                std::cout << "SafeChat-Server version " << __version << "\n";
+                exit(EXIT_SUCCESS);
+            } else
+                throw "unknown argument '" + std::string(argv[i]) + "'";
         }
-    }
-    if (_port < 1 || _port > 65535) {
-        print_help();
-        std::cerr << "SafeChat-Server: invalid port number\n";
-        exit(EXIT_FAILURE);
-    }
-    if (_max_sockets < 1) {
-        print_help();
-        std::cerr << "SafeChat-Server: invalid number of max sockets\n";
+        if (_port < 1 || _port > 65535)
+            throw "invalid port number";
+        if (_max_sockets < 1)
+            throw "invalid number of max sockets";
+    } catch (std::string error) {
+        std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n    -v Displays the version\n\n" << std::flush;
+        std::cerr << "SafeChat-Server: " << error << "\n";
         exit(EXIT_FAILURE);
     }
 }
@@ -63,13 +58,17 @@ Server::~Server() {
 
     std::ofstream config_file(_config_path.c_str());
 
-    pthread_kill(_cleaner, SIGTERM);
-    close(_socket);
-    if (!config_file) {
-        std::cerr << "Error: can't write " << _config_path << ".\n";
-    } else {
-        config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
-        config_file.close();
+    try {
+        pthread_kill(_cleaner, SIGTERM);
+        close(_socket);
+        if (!config_file)
+            throw "can't write " + _config_path;
+        else {
+            config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
+            config_file.close();
+        }
+    } catch (std::string error) {
+        std::cerr << "Error: " << error << ".\n";
     }
 }
 
@@ -80,20 +79,23 @@ void Server::start() {
     socklen_t addr_size = sizeof (sockaddr_in);
     sockaddr_in addr;
 
-    _socket = socket(AF_INET, SOCK_STREAM, 0);
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(_port);
-    if (bind(_socket, (sockaddr *) & addr, sizeof addr)) {
-        std::cerr << "Error: can't bind to port " << _port << ".\n";
+    try {
+        _socket = socket(AF_INET, SOCK_STREAM, 0);
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_port = htons(_port);
+        if (bind(_socket, (sockaddr *) & addr, sizeof addr))
+            throw "can't bind to port " + _port;
+        pthread_create(&_cleaner, NULL, &Server::cleaner, this);
+        listen(_socket, 3);
+        while (true) {
+            new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
+            pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() >= (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
+            pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
+        }
+    } catch (std::string error) {
+        std::cerr << "Error: " << error << ".\n";
         exit(EXIT_FAILURE);
-    }
-    pthread_create(&_cleaner, NULL, &Server::cleaner, this);
-    listen(_socket, 3);
-    while (true) {
-        new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
-        pair = _sockets.insert(std::make_pair(new_socket, new Socket(new_socket, _sockets.size() >= (unsigned) _max_sockets ? true : false, &_sockets, &_hosts)));
-        pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
     }
 }
 
@@ -105,24 +107,18 @@ void *Server::cleaner() {
     while (true) {
         sleep(1);
         itr = _sockets.begin();
-        while (itr != _sockets.end()) {
+        while (itr != _sockets.end())
             if (itr->second->_terminated) {
                 delete itr->second;
                 _sockets.erase(itr++);
             } else if (difftime(time(NULL), itr->second->_time) > __time_out) {
-                itr->second->print_log("Connection timed out, listener terminated");
+                itr->second->log("Connection timed out, listener terminated");
                 pthread_kill(itr->second->_listener, SIGTERM);
                 itr->second->terminate();
                 delete itr->second;
                 _sockets.erase(itr++);
-            } else {
+            } else
                 itr++;
-            }
-        }
     }
     return NULL;
-}
-
-void Server::print_help() {
-    std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n    -v Displays the version\n\n" << std::flush;
 }
