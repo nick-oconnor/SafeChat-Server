@@ -19,13 +19,16 @@ Server *server;
 
 void main_handler(int signal) {
     delete server;
-    exit(EXIT_SUCCESS);
+    exit(signal);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
     signal(SIGINT, main_handler);
     server = new Server(argc, argv);
-    server->start_server();
+    if (server->start()) {
+        delete server;
+        return EXIT_FAILURE;
+    }
     delete server;
     return EXIT_SUCCESS;
 }

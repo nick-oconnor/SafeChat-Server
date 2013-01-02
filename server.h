@@ -22,10 +22,10 @@
 class Server {
 public:
 
-    Server(int argc, char *argv[]);
+    Server(int argc, char **argv);
     ~Server();
 
-    void start_server();
+    int start();
 
     static void *cleaner(void *server) {
         return ((Server *) server)->cleaner();
@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    
+
     int _port, _max_sockets, _socket;
     std::string _config_path;
     Socket::socket_t _sockets;
@@ -44,6 +44,7 @@ private:
     pthread_t _cleaner;
 
     void *cleaner();
+
 };
 
 #endif

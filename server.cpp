@@ -15,7 +15,7 @@
 
 #include "server.h"
 
-Server::Server(int argc, char *argv[]) {
+Server::Server(int argc, char **argv) {
 
     std::string string;
     std::ifstream config_file;
@@ -42,14 +42,14 @@ Server::Server(int argc, char *argv[]) {
             else if (string == "-s" && i + 1 < argc)
                 _max_sockets = atoi(argv[++i]);
             else
-                throw std::runtime_error("unknown argument '" + std::string(argv[i]) + "'");
+                throw std::runtime_error("unknown argument " + std::string(argv[i]));
         }
         if (_port < 1 || _port > 65535)
             throw std::runtime_error("invalid port number");
         if (_max_sockets < 1)
             throw std::runtime_error("invalid number of max sockets");
     } catch (const std::exception &exception) {
-        std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server creates\n\n" << std::flush;
+        std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n\n" << std::flush;
         std::cerr << "Error: " << exception.what() << ".\n";
         exit(EXIT_FAILURE);
     }
@@ -60,6 +60,7 @@ Server::~Server() {
     std::ofstream config_file(_config_path.c_str());
 
     try {
+        std::cout << "\n" << std::flush;
         pthread_kill(_cleaner, SIGTERM);
         close(_socket);
         if (!config_file)
@@ -71,15 +72,13 @@ Server::~Server() {
     }
 }
 
-void Server::start_server() {
+int Server::start() {
 
-    bool full;
-    int id = 1, protocol = __version;
-    int new_socket;
+    int socket_num, id = 1;
     std::pair < Socket::socket_t::iterator, bool> pair;
-    socklen_t addr_size = sizeof (sockaddr_in);
     sockaddr_in addr;
-    Block block(0, NULL, 0);
+    socklen_t addr_size = sizeof (sockaddr_in);
+    Socket *socket_ptr;
 
     try {
         _socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -91,26 +90,20 @@ void Server::start_server() {
         pthread_create(&_cleaner, NULL, &Server::cleaner, this);
         listen(_socket, 3);
         while (true) {
-            new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
-            pair = _sockets.insert(std::make_pair(id, new Socket(id, new_socket, &_sockets, &_hosts)));
-            pair.first->second->send_block(block.set(__protocol, &protocol, sizeof protocol));
-            pair.first->second->log("socket created");
-            if (_sockets.size() <= (unsigned) _max_sockets) {
-                full = false;
-                pair.first->second->send_block(block.set(__full, &full, sizeof full));
-                pthread_create(&pair.first->second->_listener, NULL, &Socket::listener, pair.first->second);
-            } else {
-                full = true;
-                pair.first->second->send_block(block.set(__full, &full, sizeof full));
-                pair.first->second->log("server full");
-                pair.first->second->terminate();
-            }
+            socket_num = accept(_socket, (sockaddr *) & addr, &addr_size);
+            if (_sockets.size() < (unsigned) _max_sockets)
+                socket_ptr = new Socket(id, socket_num, false, &_sockets, &_hosts);
+            else
+                socket_ptr = new Socket(id, socket_num, true, &_sockets, &_hosts);
+            pair = _sockets.insert(std::make_pair(id, socket_ptr));
+            pair.first->second->start();
             id++;
         }
     } catch (const std::exception &exception) {
-        std::cerr << "Error: " << exception.what() << ".\n";
-        exit(EXIT_FAILURE);
+        std::cerr << "Error: " << exception.what() << ".";
+        return EXIT_FAILURE;
     }
+    return EXIT_SUCCESS;
 }
 
 void *Server::cleaner() {
@@ -122,15 +115,11 @@ void *Server::cleaner() {
         sleep(1);
         socket = _sockets.begin();
         while (socket != _sockets.end())
-            if (socket->second->_terminated) {
-                socket->second->log("socket deleted");
+            if (socket->second->_delete) {
                 delete socket->second;
                 _sockets.erase(socket++);
             } else if (difftime(time(NULL), socket->second->_time) > __timeout) {
                 socket->second->log("connection timed out");
-                pthread_kill(socket->second->_listener, SIGTERM);
-                socket->second->terminate();
-                socket->second->log("socket deleted");
                 delete socket->second;
                 _sockets.erase(socket++);
             } else

@@ -23,38 +23,38 @@
 #include <netdb.h>
 #include "block.h"
 
-#define __version           1.5
+#define __version           2.0
 #define __timeout           60
 
-#define __keepalive         1
-#define __protocol          2
-#define __full              3
-#define __name              4
-#define __available         5
-#define __hosts             6
-#define __try               7
-#define __decline           8
-#define __accept            9
-#define __data              10
-#define __disconnect        11
+#define __keepalive         0
+#define __name              1
+#define __available         2
+#define __hosts             3
+#define __try               4
+#define __accept            5
+#define __data              6
+#define __disconnect        7
 
-#define __max_block_size    1000000
+#define __max_block_size    1024 * 1024
 
 class Socket {
 public:
 
     typedef std::map<int, Socket *> socket_t;
-    typedef std::map<int, std::string> host_t;
+    typedef std::map<int, std::string *> host_t;
 
-    bool _terminated;
+    bool _delete;
     time_t _time;
     pthread_t _listener;
 
-    Socket(int id, int socket, socket_t *sockets, host_t *hosts);
+    Socket(int id, int socket, bool full, socket_t *sockets, host_t *hosts);
+    ~Socket();
+
+    void start();
+    void clean();
 
     void send_block(const Block &block);
     void log(const std::string &string);
-    void terminate();
 
     static void *listener(void *socket) {
         return ((Socket *) socket)->listener();
@@ -66,13 +66,15 @@ public:
 
 private:
 
+    bool _full;
     int _id, _socket;
     std::string _name;
-    Socket *_peer;
+    Socket *_pending, *_peer;
     socket_t *_sockets;
     host_t *_hosts;
 
     void *listener();
+
 };
 
 #endif
