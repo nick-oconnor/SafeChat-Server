@@ -20,16 +20,16 @@ Server::Server(int argc, char **argv) {
     std::string string;
     std::ifstream config_file;
 
+    _config_path = std::string(getenv("HOME")) + "/.safechat-server";
     try {
-        _config_path = std::string(getenv("HOME")) + "/.safechat-server";
         config_file.open(_config_path.c_str());
         if (!config_file)
             throw std::runtime_error("can't read config file");
         while (std::getline(config_file, string))
             if (string.substr(0, 5) == "port=")
                 _port = atoi(string.substr(5).c_str());
-            else if (string.substr(0, 12) == "max_sockets=")
-                _max_sockets = atoi(string.substr(12).c_str());
+            else if (string.substr(0, 16) == "max_connections=")
+                _max_connections = atoi(string.substr(16).c_str());
         config_file.close();
     } catch (const std::exception &exception) {
         std::cerr << "Error: " << exception.what() << ".\n";
@@ -39,17 +39,17 @@ Server::Server(int argc, char **argv) {
             string = argv[i];
             if (string == "-p" && i + 1 < argc)
                 _port = atoi(argv[++i]);
-            else if (string == "-s" && i + 1 < argc)
-                _max_sockets = atoi(argv[++i]);
+            else if (string == "-c" && i + 1 < argc)
+                _max_connections = atoi(argv[++i]);
             else
                 throw std::runtime_error("unknown argument " + std::string(argv[i]));
         }
         if (_port < 1 || _port > 65535)
             throw std::runtime_error("invalid port number");
-        if (_max_sockets < 1)
-            throw std::runtime_error("invalid number of max sockets");
+        if (_max_connections < 1)
+            throw std::runtime_error("invalid maximum number of connections");
     } catch (const std::exception &exception) {
-        std::cout << "SafeChat-Server (version " << __version << ") - (c) 2012 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -s <numb> Specifies the maximum number of sockets the server opens\n\n" << std::flush;
+        std::cout << "SafeChat-Server (version " << std::fixed << std::setprecision(1) << __version << ") - (c) 2013 Nicholas Pitt \nhttps://www.xphysics.net/\n\n    -p <port> Specifies the port the server binds to\n    -c <numb> Specifies the maximum number of connections\n" << std::endl;
         std::cerr << "Error: " << exception.what() << ".\n";
         exit(EXIT_FAILURE);
     }
@@ -59,26 +59,26 @@ Server::~Server() {
 
     std::ofstream config_file(_config_path.c_str());
 
+    pthread_kill(_cleaner, SIGTERM);
+    close(_socket);
     try {
-        std::cout << "\n" << std::flush;
-        pthread_kill(_cleaner, SIGTERM);
-        close(_socket);
         if (!config_file)
             throw std::runtime_error("can't write config file");
-        config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_sockets=" << _max_sockets;
+        config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_connections=" << _max_connections;
         config_file.close();
     } catch (const std::exception &exception) {
-        std::cerr << "Error: " << exception.what() << ".\n";
+        std::cerr << "Error: " << exception.what() << ".";
     }
+    std::cout << std::endl;
 }
 
 int Server::start() {
 
-    int socket_num, id = 1;
-    std::pair < Socket::socket_t::iterator, bool> pair;
+    int new_socket;
+    std::pair < Connection::connections_t::iterator, bool> pair;
     sockaddr_in addr;
     socklen_t addr_size = sizeof (sockaddr_in);
-    Socket *socket_ptr;
+    Connection *connection;
 
     try {
         _socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -90,14 +90,13 @@ int Server::start() {
         pthread_create(&_cleaner, NULL, &Server::cleaner, this);
         listen(_socket, 3);
         while (true) {
-            socket_num = accept(_socket, (sockaddr *) & addr, &addr_size);
-            if (_sockets.size() < (unsigned) _max_sockets)
-                socket_ptr = new Socket(id, socket_num, false, &_sockets, &_hosts);
+            new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
+            if (_connections.size() < (unsigned) _max_connections)
+                connection = new Connection(new_socket, false, &_connections, &_hosts);
             else
-                socket_ptr = new Socket(id, socket_num, true, &_sockets, &_hosts);
-            pair = _sockets.insert(std::make_pair(id, socket_ptr));
+                connection = new Connection(new_socket, true, &_connections, &_hosts);
+            pair = _connections.insert(std::make_pair(new_socket, connection));
             pair.first->second->start();
-            id++;
         }
     } catch (const std::exception &exception) {
         std::cerr << "Error: " << exception.what() << ".";
@@ -108,22 +107,22 @@ int Server::start() {
 
 void *Server::cleaner() {
 
-    Socket::socket_t::iterator socket;
+    Connection::connections_t::iterator connection;
 
     signal(SIGTERM, thread_handler);
     while (true) {
         sleep(1);
-        socket = _sockets.begin();
-        while (socket != _sockets.end())
-            if (socket->second->_delete) {
-                delete socket->second;
-                _sockets.erase(socket++);
-            } else if (difftime(time(NULL), socket->second->_time) > __timeout) {
-                socket->second->log("connection timed out");
-                delete socket->second;
-                _sockets.erase(socket++);
+        connection = _connections.begin();
+        while (connection != _connections.end())
+            if (connection->second->_terminate) {
+                delete connection->second;
+                _connections.erase(connection++);
+            } else if (difftime(time(NULL), connection->second->_time) > __timeout) {
+                connection->second->log("connection timed out");
+                delete connection->second;
+                _connections.erase(connection++);
             } else
-                socket++;
+                connection++;
     }
     return NULL;
 }

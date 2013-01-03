@@ -37,8 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/server.o \
 	${OBJECTDIR}/main.o \
-	${OBJECTDIR}/socket.o \
-	${OBJECTDIR}/block.o
+	${OBJECTDIR}/connection.o
 
 
 # C Compiler Flags
@@ -75,15 +74,10 @@ ${OBJECTDIR}/main.o: main.cpp
 	${RM} $@.d
 	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
 
-${OBJECTDIR}/socket.o: socket.cpp 
+${OBJECTDIR}/connection.o: connection.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/socket.o socket.cpp
-
-${OBJECTDIR}/block.o: block.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/block.o block.cpp
+	$(COMPILE.cc) -O3 -Wall -s -MMD -MP -MF $@.d -o ${OBJECTDIR}/connection.o connection.cpp
 
 # Subprojects
 .build-subprojects:

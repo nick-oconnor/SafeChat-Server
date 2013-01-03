@@ -17,7 +17,8 @@
 #define	server_h
 
 #include <fstream>
-#include "socket.h"
+#include <iomanip>
+#include "connection.h"
 
 class Server {
 public:
@@ -37,10 +38,10 @@ public:
 
 private:
 
-    int _port, _max_sockets, _socket;
+    int _port, _max_connections, _socket;
     std::string _config_path;
-    Socket::socket_t _sockets;
-    Socket::host_t _hosts;
+    Connection::connections_t _connections;
+    Connection::hosts_t _hosts;
     pthread_t _cleaner;
 
     void *cleaner();

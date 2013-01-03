@@ -5,13 +5,11 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>README</itemPath>
-      <itemPath>block.cpp</itemPath>
-      <itemPath>block.h</itemPath>
+      <itemPath>connection.cpp</itemPath>
+      <itemPath>connection.h</itemPath>
       <itemPath>main.cpp</itemPath>
       <itemPath>server.cpp</itemPath>
       <itemPath>server.h</itemPath>
-      <itemPath>socket.cpp</itemPath>
-      <itemPath>socket.h</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
