@@ -18,6 +18,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <stdlib.h>
 #include "connection.h"
 
 class Server {
