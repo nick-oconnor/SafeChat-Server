@@ -24,7 +24,7 @@ Server::Server(int argc, char **argv) {
     try {
         config_file.open(_config_path.c_str());
         if (!config_file)
-            throw std::runtime_error("can't read config file");
+            throw std::runtime_error("can't read configuration file");
         while (std::getline(config_file, string))
             if (string.substr(0, 5) == "port=")
                 _port = atoi(string.substr(5).c_str());
@@ -63,8 +63,8 @@ Server::~Server() {
     close(_socket);
     try {
         if (!config_file)
-            throw std::runtime_error("can't write config file");
-        config_file << "Config file for SafeChat-Server\n\nport=" << _port << "\nmax_connections=" << _max_connections;
+            throw std::runtime_error("can't write configuration file");
+        config_file << "Configuration file for SafeChat-Server\n\nport=" << _port << "\nmax_connections=" << _max_connections;
         config_file.close();
     } catch (const std::exception &exception) {
         std::cerr << "Error: " << exception.what() << ".";
@@ -92,9 +92,9 @@ int Server::start() {
         while (true) {
             new_socket = accept(_socket, (sockaddr *) & addr, &addr_size);
             if (_connections.size() < (unsigned) _max_connections)
-                connection = new Connection(new_socket, false, &_connections, &_hosts);
+                connection = new Connection(new_socket, false, &_connections, &_peers);
             else
-                connection = new Connection(new_socket, true, &_connections, &_hosts);
+                connection = new Connection(new_socket, true, &_connections, &_peers);
             pair = _connections.insert(std::make_pair(new_socket, connection));
             pair.first->second->start();
         }

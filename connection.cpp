@@ -15,31 +15,26 @@
 
 #include "connection.h"
 
-Connection::Connection(int socket, bool full, connections_t *connections, hosts_t *hosts) {
+Connection::Connection(int socket, bool full, connections_t *connections, peers_t *peers) {
     _socket = socket;
     _full = full;
     _connections = connections;
-    _hosts = hosts;
+    _peers = peers;
     _terminate = false;
-    _pending = _peer = NULL;
+    _peer = NULL;
     time(&_time);
 }
 
 Connection::~Connection() {
     pthread_kill(_network_listener, SIGTERM);
     close(_socket);
-    _hosts->erase(_socket);
-    if (_pending != NULL) {
-        _pending->send_block(block_t(block_t::unavailable));
-        _pending->log("unavailable host sent");
-        _pending = NULL;
-    }
-    if (_peer != NULL) {
+    _peers->erase(_socket);
+    if (_peer) {
         pthread_kill(_peer->_network_listener, SIGTERM);
         _peer->send_block(block_t(block_t::disconnect));
         _peer->log("disconnect sent");
         _peer->_terminate = true;
-        _peer = _peer->_peer = NULL;
+        _peer->_peer = NULL;
     }
     log("terminated");
 }
@@ -70,9 +65,9 @@ void Connection::log(const std::string &string) {
 
 void *Connection::network_listener() {
 
-    int hosts_size;
+    int lists_size;
     connections_t::iterator connection;
-    hosts_t::iterator host;
+    peers_t::iterator peer;
     block_t block;
 
     signal(SIGTERM, thread_handler);
@@ -88,44 +83,35 @@ void *Connection::network_listener() {
                 if (!recv(_socket, block._data, block._size, MSG_WAITALL))
                     throw std::runtime_error("connection dropped");
             time(&_time);
-            if (block._cmd == block_t::name && !_pending && !_peer) {
+            if (block._cmd == block_t::name && !_peer) {
                 _name = (char *) block._data;
                 log("set name to " + _name);
-            } else if (block._cmd == block_t::host && !_pending && !_peer) {
-                _hosts->insert(std::make_pair(_socket, &_name));
-                log("added to hosts list");
-            } else if (block._cmd == block_t::list && !_pending && !_peer) {
-                hosts_size = _hosts->size();
-                send_block(block_t(block_t::list, &hosts_size, sizeof hosts_size));
-                for (host = _hosts->begin(); host != _hosts->end(); host++) {
-                    send_block(block_t(block_t::list, &host->first, sizeof host->first));
-                    send_block(block_t(block_t::list, host->second->c_str(), host->second->size() + 1));
+            } else if (block._cmd == block_t::add && !_peer) {
+                _peers->insert(std::make_pair(_socket, &_name));
+                log("added to peers");
+            } else if (block._cmd == block_t::list && !_peer) {
+                lists_size = _peers->size();
+                send_block(block_t(block_t::list, &lists_size, sizeof lists_size));
+                for (peer = _peers->begin(); peer != _peers->end(); peer++) {
+                    send_block(block_t(block_t::list, &peer->first, sizeof peer->first));
+                    send_block(block_t(block_t::list, peer->second->c_str(), peer->second->size() + 1));
                 }
-                log("hosts list sent");
-            } else if (block._cmd == block_t::request && !_pending && !_peer) {
+                log("list sent");
+            } else if (block._cmd == block_t::connect && !_peer) {
                 connection = _connections->find(*(int *) block._data);
-                host = _hosts->find(*(int *) block._data);
-                if (connection != _connections->end() && host != _hosts->end()) {
-                    _hosts->erase(connection->second->_socket);
-                    connection->second->_pending = this;
-                    connection->second->send_block(block_t(block_t::request, _name.c_str(), _name.size() + 1));
-                    log("tried host " + connection->second->_name);
+                peer = _peers->find(*(int *) block._data);
+                if (connection != _connections->end() && peer != _peers->end()) {
+                    _peer = connection->second;
+                    _peer->_peer = this;
+                    send_block(block_t(block_t::connect, _peer->_name.c_str(), _peer->_name.size() + 1));
+                    _peer->send_block(block_t(block_t::connect, _name.c_str(), _name.size() + 1));
+                    log("connected to " + connection->second->_name);
+                    _peers->erase(_peer->_socket);
                 } else {
                     send_block(block_t(block_t::unavailable));
-                    log("tried unavailable host");
+                    log("unavailable sent");
                 }
-            } else if (block._cmd == block_t::accept && _pending && !_peer) {
-                _peer = _pending;
-                _peer->_peer = this;
-                _pending = NULL;
-                _peer->send_block(block);
-                log("accepted client " + _peer->_name);
-            } else if (block._cmd == block_t::decline && _pending && !_peer) {
-                _pending->send_block(block);
-                log("declined client " + _pending->_name);
-                _pending = NULL;
-                _hosts->insert(std::make_pair(_socket, &_name));
-            } else if (block._cmd == block_t::data && !_pending && _peer)
+            } else if (block._cmd == block_t::data && _peer)
                 _peer->send_block(block);
             else if (block._cmd == block_t::disconnect)
                 throw std::runtime_error("disconnect received");

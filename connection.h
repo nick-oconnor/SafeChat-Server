@@ -32,12 +32,12 @@ class Connection {
 public:
 
     typedef std::map<int, Connection *> connections_t;
-    typedef std::map<int, std::string *> hosts_t;
+    typedef std::map<int, std::string *> peers_t;
 
     bool _terminate;
     time_t _time;
 
-    Connection(int socket, bool full, connections_t *connections, hosts_t *hosts);
+    Connection(int socket, bool full, connections_t *connections, peers_t *peers);
     ~Connection();
 
     void start();
@@ -56,7 +56,7 @@ private:
     struct block_t {
 
         enum cmd_t {
-            keepalive, version, full, name, host, list, request, accept, decline, unavailable, data, disconnect
+            keepalive, version, full, name, add, list, connect, unavailable, data, disconnect
         } _cmd;
         int _size;
         unsigned char *_data;
@@ -102,8 +102,8 @@ private:
     std::string _name;
     pthread_t _network_listener;
     connections_t *_connections;
-    hosts_t *_hosts;
-    Connection *_pending, *_peer;
+    peers_t *_peers;
+    Connection *_peer;
 
     void *network_listener();
     void send_block(const block_t &block);

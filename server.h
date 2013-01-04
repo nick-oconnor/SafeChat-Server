@@ -42,7 +42,7 @@ private:
     int _port, _max_connections, _socket;
     std::string _config_path;
     Connection::connections_t _connections;
-    Connection::hosts_t _hosts;
+    Connection::peers_t _peers;
     pthread_t _cleaner;
 
     void *cleaner();
