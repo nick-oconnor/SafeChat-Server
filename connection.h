@@ -24,7 +24,7 @@
 #include <signal.h>
 #include <pthread.h>
 
-#define __version       3.0
+#define __version       4.0
 #define __timeout       30
 #define __block_size    1024 * 1024
 

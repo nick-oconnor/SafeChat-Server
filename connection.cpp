@@ -96,7 +96,7 @@ void *Connection::network_listener() {
                     send_block(block_t(block_t::list, &peer->first, sizeof peer->first));
                     send_block(block_t(block_t::list, peer->second->c_str(), peer->second->size() + 1));
                 }
-                log("list sent");
+                log("peers list sent");
             } else if (block._cmd == block_t::connect && !_peer) {
                 connection = _connections->find(*(int *) block._data);
                 peer = _peers->find(*(int *) block._data);
