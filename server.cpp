@@ -114,10 +114,10 @@ void *Server::cleaner() {
         sleep(1);
         connection = _connections.begin();
         while (connection != _connections.end())
-            if (connection->second->_terminate) {
+            if (connection->second->is_terminated()) {
                 delete connection->second;
                 _connections.erase(connection++);
-            } else if (difftime(time(NULL), connection->second->_time) > __timeout) {
+            } else if (difftime(time(NULL), connection->second->get_time()) > __timeout) {
                 connection->second->log("connection timed out");
                 delete connection->second;
                 _connections.erase(connection++);

@@ -20,22 +20,18 @@
 #include <iostream>
 #include <stdexcept>
 #include <netdb.h>
-#include <string.h>
 #include <signal.h>
 #include <pthread.h>
+#include "block.h"
 
-#define __version       4.0
+#define __version       4.1
 #define __timeout       30
-#define __block_size    1024 * 1024
 
 class Connection {
 public:
 
     typedef std::map<int, Connection *> connections_t;
     typedef std::map<int, std::string *> peers_t;
-
-    bool _terminate;
-    time_t _time;
 
     Connection(int socket, bool full, connections_t *connections, peers_t *peers);
     ~Connection();
@@ -51,62 +47,28 @@ public:
         pthread_exit(NULL);
     }
 
+    const time_t &get_time() const {
+        return _time;
+    }
+
+    bool is_terminated() const {
+        return _terminate;
+    }
+
 private:
 
-    struct block_t {
-
-        enum cmd_t {
-            keepalive, version, full, name, add, list, connect, unavailable, data, disconnect
-        } _cmd;
-        int _size;
-        unsigned char *_data;
-
-        block_t() {
-            _data = new unsigned char[__block_size];
-        }
-
-        block_t(cmd_t cmd) {
-            _cmd = cmd;
-            _size = 0;
-            _data = new unsigned char[__block_size];
-        }
-
-        block_t(cmd_t cmd, int size) {
-            _cmd = cmd;
-            _size = size;
-            _data = new unsigned char[__block_size];
-        }
-
-        block_t(cmd_t cmd, const void *data, int size) {
-            _cmd = cmd;
-            _size = size;
-            _data = new unsigned char[__block_size];
-            memcpy(_data, data, size);
-        }
-
-        ~block_t() {
-            delete[] _data;
-        }
-
-        block_t &operator=(const block_t & block) {
-            _cmd = block._cmd;
-            _size = block._size;
-            memcpy(_data, block._data, block._size);
-            return *this;
-        }
-
-    };
-
-    bool _full;
+    bool _full, _terminate;
     int _socket;
     std::string _name;
     pthread_t _network_listener;
     connections_t *_connections;
     peers_t *_peers;
+    time_t _time;
     Connection *_peer;
 
     void *network_listener();
     void send_block(const block_t &block);
+
 };
 
 #endif

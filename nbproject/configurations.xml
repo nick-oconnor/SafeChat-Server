@@ -5,6 +5,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>README</itemPath>
+      <itemPath>block.h</itemPath>
       <itemPath>connection.cpp</itemPath>
       <itemPath>connection.h</itemPath>
       <itemPath>main.cpp</itemPath>
