@@ -16,8 +16,8 @@
 #ifndef server_h
 #define	server_h
 
-#include <fstream>
 #include <iomanip>
+#include <fstream>
 #include <stdlib.h>
 #include "connection.h"
 
@@ -27,7 +27,7 @@ public:
     Server(int argc, char **argv);
     ~Server();
 
-    int start();
+    void start();
 
     static void *cleaner(void *server) {
         return ((Server *) server)->cleaner();

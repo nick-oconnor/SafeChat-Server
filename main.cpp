@@ -25,10 +25,5 @@ void main_handler(int signal) {
 int main(int argc, char **argv) {
     signal(SIGINT, main_handler);
     server = new Server(argc, argv);
-    if (server->start()) {
-        delete server;
-        return EXIT_FAILURE;
-    }
-    delete server;
-    return EXIT_SUCCESS;
+    server->start();
 }

@@ -67,12 +67,12 @@ Server::~Server() {
         config_file << "Configuration file for SafeChat-Server\n\nport=" << _port << "\nmax_connections=" << _max_connections;
         config_file.close();
     } catch (const std::exception &exception) {
-        std::cerr << "Error: " << exception.what() << ".";
+        std::cerr << "\nError: " << exception.what() << ".";
     }
     std::cout << std::endl;
 }
 
-int Server::start() {
+void Server::start() {
 
     int new_socket;
     std::pair < Connection::connections_t::iterator, bool> pair;
@@ -100,9 +100,9 @@ int Server::start() {
         }
     } catch (const std::exception &exception) {
         std::cerr << "Error: " << exception.what() << ".";
-        return EXIT_FAILURE;
+        this->~Server();
+        exit(EXIT_FAILURE);
     }
-    return EXIT_SUCCESS;
 }
 
 void *Server::cleaner() {

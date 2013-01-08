@@ -33,6 +33,7 @@ Connection::~Connection() {
         pthread_kill(_peer->_network_listener, SIGTERM);
         _peer->send_block(block_t(block_t::disconnect));
         _peer->log("disconnect sent");
+        close(_socket);
         _peer->_terminate = true;
         _peer->_peer = NULL;
     }
