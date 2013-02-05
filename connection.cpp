@@ -66,7 +66,7 @@ void Connection::log(const std::string &string) {
 
 void *Connection::network_listener() {
 
-    int lists_size;
+    int peers_size;
     connections_t::iterator connection;
     peers_t::iterator peer;
     block_t block;
@@ -91,8 +91,8 @@ void *Connection::network_listener() {
                 _peers->insert(std::make_pair(_socket, &_name));
                 log("added to peers");
             } else if (block._cmd == block_t::list && !_peer) {
-                lists_size = _peers->size();
-                send_block(block_t(block_t::list, &lists_size, sizeof lists_size));
+                peers_size = _peers->size();
+                send_block(block_t(block_t::list, &peers_size, sizeof peers_size));
                 for (peer = _peers->begin(); peer != _peers->end(); peer++) {
                     send_block(block_t(block_t::list, &peer->first, sizeof peer->first));
                     send_block(block_t(block_t::list, peer->second->c_str(), peer->second->size() + 1));
