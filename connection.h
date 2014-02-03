@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <netdb.h>
 #include <signal.h>
+#include <unistd.h>
 #include <pthread.h>
 #include "block.h"
 
